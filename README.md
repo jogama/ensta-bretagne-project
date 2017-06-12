@@ -4,3 +4,7 @@ Uses a few files from [robmooc](https://www.ensta-bretagne.fr/jaulin/robmooc.htm
 
 Currently, it simply demonstrates matplotlib's potential field and 3d plotting tools
 
+To run:
+    $ python3 potential\_field\_islands.py
+
+And you will see a potentia field plot and a 3d plot.

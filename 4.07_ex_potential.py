@@ -1,5 +1,11 @@
 from roblib import *
 
+'''
+Origin: ENSTA Bretagne
+    RobMOOC
+    https://www.ensta-bretagne.fr/jaulin/robmooc.html
+'''
+
 def f(x,u):
     x,u  = x.flatten(), u.flatten()
     v,θ = x[2],x[3]    

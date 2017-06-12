@@ -24,7 +24,11 @@ from matplotlib.collections import PatchCollection
 # U+03C3 Sigma; U+03C4 Tau; U+03C6 φ Phi; U+03C8 ψ Psi; U+03C9 Omega ω
 # U+0393 Γ
 
-
+'''
+Origin: ENSTA Bretagne
+    RobMOOC
+    https://www.ensta-bretagne.fr/jaulin/robmooc.html
+'''
 
 def eulermat(φ,θ,ψ):
     Ad_i = array([[0, 0, 0],[0,0,-1],[0,1,0]])
