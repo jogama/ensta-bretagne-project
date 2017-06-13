@@ -5,7 +5,9 @@ Author: Jonathan Garcia-Mallen
 
 Demonstrates matplotlib's quiver to produce potential field plots. 3d plotting
 as used to debug this, and is kept in the code as another example. The gausians
-represent islands, hence the variable names. 
+represent islands, hence the variable names.
+
+Based off of 4.07_ex_potential.py
 '''
 
 from scipy.stats import multivariate_normal as mnorm
@@ -13,7 +15,9 @@ import matplotlib.pyplot as plt
 import roblib as rl
 import numpy as np
 
-def draw_field(normalize=True, three_d=False):
+def draw_field(normalize=True, three_d=False, animation_vars=None):
+    if animation_vars != None:
+        x, xmin, xmax, ymin, ymax = animation_vars
     # x and y coordinates/locations of the arrows
     Mx    = np.arange(xmin,xmax,0.3)
     My    = np.arange(ymin,ymax,0.3)
@@ -50,11 +54,13 @@ def f(x,u):
     v,θ = x[2],x[3]    
     return np.array([ [ v*np.cos(θ) ],[ v*np.sin(θ) ], [u[0]], [u[1]]])
 
-x    = np.array([[4,-3,1,2]]).T #x,y,v,θ
-dt   = 0.2
-fig  = plt.figure('Two normalized Island')
-ax   = fig.add_subplot(111, aspect='equal')
-xmin,xmax,ymin,ymax=-5,5,-5,5
 
-draw_field(three_d=True, normalize=False)
-plt.show()
+if __name__ == "__main__":
+    x    = np.array([[4,-3,1,2]]).T #x,y,v,θ
+    dt   = 0.2
+    fig  = plt.figure('Two normalized Island')
+    ax   = fig.add_subplot(111, aspect='equal')
+    xmin,xmax,ymin,ymax=-5,5,-5,5
+
+    draw_field(three_d=True, normalize=False)
+    plt.show()
