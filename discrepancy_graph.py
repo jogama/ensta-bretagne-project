@@ -6,8 +6,6 @@ import numpy as np
 
 '''
 Author: Jonathan Garcia-Mallen
-Creates two islands and has a uuv (a ball) go around it.
-The ball takes measurements. They could be compass, odometry, or something else.
-idk. I'll just try to make it. 
+Creates two islands and has a uuv go around it.
+The uuv takes measurements. They could be compass, odometry, or something else.
 '''
-7~5B

@@ -16,7 +16,7 @@ import numpy as np
 step = .2
 X, Y = np.meshgrid(np.arange(-np.pi, np.pi, step), np.arange(-np.pi, np.pi, step))
 island_center = [0, 0]
-island = mnorm(island_center, cov=1).pdf(np.dstack((X,Y)))
+island = mnorm(island_center, cov=1).pdf(np.dstack((X, Y)))
 
 U = np.gradient(island)[1]
 V = np.gradient(island)[0]
