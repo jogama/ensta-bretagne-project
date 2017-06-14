@@ -80,5 +80,19 @@ def run_car(duration, dt=.1):
         draw_field(normalize=False
                    , animation_vars=(x, xmin, xmax, ymin, ymax))
 
+def show_tank(x=np.array([[0, 0, 1, np.pi/2]]).T, col='darkblue', r=1):
+    '''
+    Runs roblib.draw_tank and displays the result.
+    Written to play with and furtherunderstand roblib.draw_tank().
+    '''
+    fig  = plt.figure(0)
+    ax   = fig.add_subplot(111, aspect='equal')
+    xmin,xmax,ymin,ymax=-5,5,-5,5
+
+    ax.set_xlim(xmin,xmax)
+    ax.set_ylim(ymin,ymax)
+    rl.draw_tank(x[[0,1,3]],'red',0.2) # x,y,θ
+    plt.show()
+        
 if __name__ == "__main__":
     run_car(2)
