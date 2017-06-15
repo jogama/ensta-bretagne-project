@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy import mean, pi, cos, sin, sqrt, tan, arctan, arctan2, tanh, arcsin,\
@@ -28,6 +30,8 @@ from matplotlib.collections import PatchCollection
 Origin: ENSTA Bretagne
     RobMOOC
     https://www.ensta-bretagne.fr/jaulin/robmooc.html
+Author: Luc Jaulin
+Modified by Jonathan Garcia-Mallen
 '''
 
 
