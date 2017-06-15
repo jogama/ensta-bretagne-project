@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from potential_field_islands import draw_field, make_islands
+from numpy.linalg import norm
 import matplotlib.pyplot as plt
 import roblib as rl
 import numpy as np
@@ -60,23 +61,20 @@ def location_to_index(loc, Mx, My):
     return index.astype(int)
 
 def flc_disk(state, gradient, height, desired_height):
-    pass
+    # disks have 360° symmetry.
+    unit_g = gradient / norm(gradient)
+    
+    dx = np.zeros(state.size)
+    dx[0] =  -unit_g[0]# * (desired_height - height) 
+    dx[1] =   unit_g[1]# * (desired_height - height)
+    print(desired_height - height)
+    # pdb.set_trace()    
+    return dx.reshape((state.size, 1))
 
 def flc_tank(state, gradient, height, desired_height):
-    '''
-    Simple proportional controller to follow a level
-    Args:
-      height:   Number
-      gradient: 2-d numpy array
-
-    Returns:
-      xdot = (x, y) 
-    '''
-
-    # The actual controller doesn't know where the robot is; just the gradient and height.        
-    
+    # The actual controller doesn't know where the robot is; just the gradient and height.
     v  = state[2]
-    dx = np.zeros(4) 
+    dx = np.zeros(state.size) 
     dx[0] = v * gradient[0] * (desired_height - height) 
     dx[1] = v * gradient[1] * (desired_height - height) 
 
@@ -103,11 +101,11 @@ def follow_level_curve(state, desired_height, Mx, My, VX, VY, V):
     
 def runcar(duration, dt=.1):
     # initialize variables
-    x = np.array([[-4, -4, 100000, np.pi / 2]]).T  # x,y,v,θ
+    x = np.array([[4, -4, 1500]]).T  # x,y,v
     fig = plt.figure(0)
     ax = fig.add_subplot(111, aspect='equal')
     xmin, xmax, ymin, ymax = -5, 5, -5, 5
-    V_0 = 0.025  # desired height, or potential
+    V_0 = 0.015  # desired height, or potential
 
     # make a controller that includes the gradient
     # the curve following controller does does not localize, but uses these:
@@ -126,6 +124,9 @@ def runcar(duration, dt=.1):
         x = x + dt * controller(x)
         if(x.size == 4):
             rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
+        elif(x.size == 3):
+            rl.draw_disk(x[[0, 1]], 0.2, ax, 'red') # x,y
+            
         draw_field(normalize=False, animation_vars=(x, xmin, xmax, ymin, ymax))
 
 
