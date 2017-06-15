@@ -10,24 +10,6 @@ import pdb
 There is not a single convention as to the definition of the state in robmoocpy code. Here, it will be a numpy array x = [x, y, θ]. This would more elegantly bre represented as a vector with respect to the origin. However, we will first implement this in a "yo, it just works this way" kind of way. Aiming for easiest correct implementation, even if it is somewhat cumbersome. 
 """
 
-
-def follow_level_curve(height, desired_height, gradient):
-    '''
-    Simple proportional controller to follow a level
-    Args:
-      height:   Number
-      gradient: 2-d numpy array
-
-    Returns:
-      xdot = (x, y) 
-    '''
-    # This is currently naïve.
-    # change in heading
-    dθ = (desired_height - height) * 10
-    
-    return dθ
-
-
 def straight_line(x):
     ''' toy controller to go in a straight line. For some reason, it also accelerates.'''
     x = x.flatten()
@@ -77,6 +59,47 @@ def location_to_index(loc, Mx, My):
 
     return index.astype(int)
 
+def flc_disk(state, gradient, height, desired_height):
+    pass
+
+def flc_tank(state, gradient, height, desired_height):
+    '''
+    Simple proportional controller to follow a level
+    Args:
+      height:   Number
+      gradient: 2-d numpy array
+
+    Returns:
+      xdot = (x, y) 
+    '''
+
+    # The actual controller doesn't know where the robot is; just the gradient and height.        
+    
+    v  = state[2]
+    dx = np.zeros(4) 
+    dx[0] = v * gradient[0] * (desired_height - height) 
+    dx[1] = v * gradient[1] * (desired_height - height) 
+
+    return dx.reshape((state.size, 1))
+    
+
+def follow_level_curve(state, desired_height, Mx, My, VX, VY, V):
+    '''
+    Wrapper for flc_tank and flc_disk. The state should really be an object, with properties. 
+    '''
+    # pyplot displays the robot in the coordinate frame, and this is its state.
+    # The potential and gradient matrices have integer indices, thus this conversion:
+    xi = location_to_index(state, Mx, My)
+    height = V[xi[0], xi[1]]; 
+    gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
+    
+    if(state.size == 4):
+        # Assume state includes θ
+        return flc_tank(state, gradient, height, desired_height)
+    if(state.size == 3):
+        # Assume state does not include θ
+        return flc_disk(state, gradient, height, desired_height)
+    
     
 def runcar(duration, dt=.1):
     # initialize variables
@@ -89,27 +112,7 @@ def runcar(duration, dt=.1):
     # make a controller that includes the gradient
     # the curve following controller does does not localize, but uses these:
     Mx, My, VX, VY, V = make_islands(xmin, xmax, ymin, ymax)
-
-    def flc(state):
-        # The actual controller doesn't know where the robot is; just the gradient and height.        
-        xi = location_to_index(state, Mx, My)
-        height = V[xi[0], xi[1]]; 
-        gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
-        dθ = follow_level_curve(height, V_0, gradient)
-        
-        v, θ = state[2], state[3]
-        dx   = np.zeros(4)
-        
-        dx[0] = v * gradient[0] * (V_0 - height) 
-        dx[1] = v * gradient[1] * (V_0 - height) 
-        # dx[3] = dθ
-        print(dx)
-        # print("height = ", height)
-        # print("gradient:\n",gradient, gradient.shape)
-        # print("dθ =", dθ)
-        # print("θ  =", θ)
-        # return column vector
-        return dx.reshape((x.size, 1))
+    controller = lambda state: follow_level_curve(state, V_0, Mx, My, VX, VY, V)
 
     # run the animation
     for t in np.arange(0, duration, dt):
@@ -119,9 +122,10 @@ def runcar(duration, dt=.1):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
         
-        # iterate the controler and draw vehicle
-        x = x + dt * flc(x) 
-        rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
+        # iterate the controller and draw vehicle
+        x = x + dt * controller(x)
+        if(x.size == 4):
+            rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
         draw_field(normalize=False, animation_vars=(x, xmin, xmax, ymin, ymax))
 
 
