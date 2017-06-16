@@ -65,10 +65,12 @@ def flc_disk(state, gradient, height, desired_height):
     unit_g = gradient / norm(gradient)
     
     dx = np.zeros(state.size)
-    dx[0] =  -unit_g[0]# * (desired_height - height) 
-    dx[1] =   unit_g[1]# * (desired_height - height)
-    print(desired_height - height)
-    # pdb.set_trace()    
+    # dx[0] =  -unit_g[0] + unit_g[1] * (desired_height - height) 
+    # dx[1] =   unit_g[1] + unit_g[0] * (desired_height - height)
+    # dx[0] =  unit_g[1] * (desired_height - height) 
+    # dx[1] =  unit_g[0] * (desired_height - height)
+    dx[0] =  -unit_g[0] 
+    dx[1] =   unit_g[1] 
     return dx.reshape((state.size, 1))
 
 def flc_tank(state, gradient, height, desired_height):
@@ -101,11 +103,11 @@ def follow_level_curve(state, desired_height, Mx, My, VX, VY, V):
     
 def runcar(duration, dt=.1):
     # initialize variables
-    x = np.array([[4, -4, 1500]]).T  # x,y,v
+    x = np.array([[1, 1, 1500]]).T  # x,y,v
     fig = plt.figure(0)
     ax = fig.add_subplot(111, aspect='equal')
     xmin, xmax, ymin, ymax = -5, 5, -5, 5
-    V_0 = 0.015  # desired height, or potential
+    V_0 = 0.025  # desired height, or potential
 
     # make a controller that includes the gradient
     # the curve following controller does does not localize, but uses these:
