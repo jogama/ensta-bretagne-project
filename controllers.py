@@ -60,27 +60,26 @@ def location_to_index(loc, Mx, My):
 
     return index.astype(int)
 
-def flc_disk(state, gradient, height, desired_height):
-    # disks have 360° symmetry.
+def flc_disk(gradient, height, desired_height):
     unit_g = gradient / norm(gradient)
+    height_diff = desired_height - height
+    dx = - unit_g[0] + unit_g[1] * height_diff * np.round(1 / height_diff)
+    dy =   unit_g[1] + unit_g[0] * height_diff * np.round(1 / height_diff)
+
+    return np.array([dx, dy])
+
+def flc_tank(gradient, height, desired_height):
+    # This scenario assumes we can only change the angle, or heading, of the vehicle.
+    # It would be more efficient to pass dx and dy rather than recalculating them
+    # in follow_level_curve, but this controller should approximate the real world.
+    unit_g = gradient / norm(gradient)
+    height_diff = desired_height - height
     
-    dx = np.zeros(state.size)
-    # dx[0] =  -unit_g[0] + unit_g[1] * (desired_height - height) 
-    # dx[1] =   unit_g[1] + unit_g[0] * (desired_height - height)
-    # dx[0] =  unit_g[1] * (desired_height - height) 
-    # dx[1] =  unit_g[0] * (desired_height - height)
-    dx[0] =  -unit_g[0] 
-    dx[1] =   unit_g[1] 
-    return dx.reshape((state.size, 1))
+    dx = - unit_g[0] + unit_g[1] * height_diff * np.round(1 / height_diff)
+    dy =   unit_g[1] + unit_g[0] * height_diff * np.round(1 / height_diff)
+    dθ = np.arctan(dy / dx)
 
-def flc_tank(state, gradient, height, desired_height):
-    # The actual controller doesn't know where the robot is; just the gradient and height.
-    v  = state[2]
-    dx = np.zeros(state.size) 
-    dx[0] = v * gradient[0] * (desired_height - height) 
-    dx[1] = v * gradient[1] * (desired_height - height) 
-
-    return dx.reshape((state.size, 1))
+    return dθ
     
 
 def follow_level_curve(state, desired_height, Mx, My, VX, VY, V):
@@ -92,22 +91,29 @@ def follow_level_curve(state, desired_height, Mx, My, VX, VY, V):
     xi = location_to_index(state, Mx, My)
     height = V[xi[0], xi[1]]; 
     gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
-    
+    velocity = state.flatten()[2]
     if(state.size == 4):
         # Assume state includes θ
-        return flc_tank(state, gradient, height, desired_height)
+        dθ = flc_tank(gradient, height, desired_height)
+        dx = velocity * np.cos(dθ)
+        dy = velocity * np.sin(dθ)
+        dX = np.array([[dx, dy, 0, dθ]]).T
+        return dX
     if(state.size == 3):
         # Assume state does not include θ
-        return flc_disk(state, gradient, height, desired_height)
+        dX = np.zeros((3,1))
+        dx, dy = flc_disk(gradient, height, desired_height) 
+        dX = np.array([[dx, dy, 0]]).T * velocity
+        return dX
     
     
 def runcar(duration, dt=.1):
     # initialize variables
-    x = np.array([[1, 1, 1500]]).T  # x,y,v
+    x = np.array([[-4, 4, 1]]).T  # x,y,v,θ
     fig = plt.figure(0)
     ax = fig.add_subplot(111, aspect='equal')
     xmin, xmax, ymin, ymax = -5, 5, -5, 5
-    V_0 = 0.025  # desired height, or potential
+    V_0 = 0.00005  # desired height, or potential
 
     # make a controller that includes the gradient
     # the curve following controller does does not localize, but uses these:
