@@ -73,7 +73,7 @@ def make_islands(xmin, xmax, ymin, ymax):
     island_center1 = [xmin + (xmax - xmin) / 2, ymin + (ymax - ymin) / 2]
     island_center2 = [xmin + (xmax - xmin) * .2, ymin + (ymax - ymin) * .9]
     island_sum = mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
-    island_sum += mnorm(island_center2, cov=2).pdf(np.dstack((X1, X2)))
+#    island_sum += mnorm(island_center2, cov=2).pdf(np.dstack((X1, X2)))
     V = island_sum
 
     # VX, VY are x and y components
@@ -83,12 +83,18 @@ def make_islands(xmin, xmax, ymin, ymax):
     return (Mx, My, VX, VY, V)
 
 
-def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, clockwise=True):
+def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold=0.3, clockwise=True):
     '''makes the potential field that the vehicle would follow'''
     
-    Mx, My, VY, VX, V = make_islands(xmin, xmax, ymin, ymax)
+    Mx, My, GX, GY, V = make_islands(xmin, xmax, ymin, ymax)
+    VX, VY = GY, GX
+    
     if(desired_potential is None):
         desired_potential = np.mean(V)
+
+    desired_pot_low  = desired_potential + desired_potential * threshold
+    desired_pot_high = desired_potential - desired_potential * threshold 
+        
 
     # Make field orthogonal to gradient
     if(clockwise):
@@ -96,7 +102,12 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, clockwise
     else:
         VY = -VY
 
-    # Make field attractive about the desired potential
+    # Make field attractive about the desired potential. 
+    less_than_wanted = (V < desired_pot_low).astype(np.int)
+    more_than_wanted = (V > desired_pot_high).astype(np.int)
+    wanted = ((V > desired_pot_low) & (V < desired_pot_high)).astype(np.int)
+    VX = ((VX + GX) * less_than_wanted) + (VX - GX) * more_than_wanted + VX * wanted
+    VY = ((VY + GY) * less_than_wanted) + (VY - GY) * more_than_wanted + VY * wanted
     
     return Mx, My, VX, VY, V
 
