@@ -70,11 +70,15 @@ def make_islands(xmin, xmax, ymin, ymax):
     # Draw islands
     X1, X2 = np.meshgrid(Mx, My)
 
-    island_center1 = [xmin + (xmax - xmin) / 2, ymin + (ymax - ymin) / 2]
-    island_center2 = [xmin + (xmax - xmin) * .2, ymin + (ymax - ymin) * .9]
-    island_sum = mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
-    island_sum += mnorm(island_center2, cov=2).pdf(np.dstack((X1, X2)))
-    V = island_sum
+    island_center0 = [xmin + (xmax - xmin) * .5, ymin + (ymax - ymin) * .5]
+    island_center1 = [xmin + (xmax - xmin) * .4, ymin + (ymax - ymin) * .7]
+    island_center2 = [xmin + (xmax - xmin) * .3, ymin + (ymax - ymin) * .4]
+    island_center3 = [xmin + (xmax - xmin) * .7, ymin + (ymax - ymin) * .5]
+    island_sum = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
+#    island_sum = mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
+#    island_sum += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
+#    island_sum = mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
+    V = island_sum * 100
 
     # VX, VY are x and y components
     VX = np.gradient(island_sum)[1]
@@ -85,7 +89,6 @@ def make_islands(xmin, xmax, ymin, ymax):
 
 def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold=0.3, clockwise=True):
     '''makes the potential field that the vehicle would follow'''
-    
     Mx, My, GX, GY, V = make_islands(xmin, xmax, ymin, ymax)
     VX, VY = GY, GX
     
@@ -111,13 +114,13 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold
     
     return Mx, My, VX, VY, V
 
-def draw_field(normalize=True, three_d=False, animation_vars=None):    
-    fig = plt.figure('Island Potentials')
+def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None):
+    if(fig is None):
+        fig = plt.figure('Island Potentials')
     ax = fig.add_subplot(111, aspect='equal')
     
     if animation_vars != None:
-        x, xmin, xmax, ymin, ymax = animation_vars
-    dp = .03 # is arbitrary
+        dp, xmin, xmax, ymin, ymax = animation_vars
     Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=dp)
     X1, X2 = np.meshgrid(Mx, My)
 
@@ -152,6 +155,6 @@ if __name__ == "__main__":
     x = np.array([[4, -3, 1, 2]]).T  # x,y,v,θ
     dt = 0.2
     # xmin,xmax,ymin,ymax=-5,5,-5,5
-    av = (None, -5, 5, -5, 5)
+    av = (1, -5, 5, -5, 5)
     draw_field(three_d=True, normalize=True, animation_vars=av)
     plt.show()

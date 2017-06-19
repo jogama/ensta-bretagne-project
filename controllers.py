@@ -44,6 +44,26 @@ def flc_disk_pid(gradient, error, error_sum):
 
     return (r + g).flatten()
 
+
+def fp_disk(gradient, height):
+    '''Follow Potential as a Disk.
+    Args:
+      gradient = [VX, VY] # potential
+      height = the current height
+    Returns:
+      (dx, dy)
+    Notes: The overall data model does not at all represent the auv,
+      and should be rewritten as such. 
+    '''
+    # normalize gradient
+    gradient = gradient / norm(gradient);
+    print(gradient)
+    dx = gradient[1]
+    dy = gradient[0]
+    print(dx, dy)
+    return dx, dy
+    
+
 def flc_tank(gradient, error):
     # This scenario assumes we can only change the angle, or heading, of the vehicle.
     # It would be more efficient to pass dx and dy rather than recalculating them
@@ -68,7 +88,6 @@ def follow_level_curve(state, desired_height, Mx, My, VX, VY, V, control='flc_ta
     error = desired_height - height
     gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
     velocity = state.flatten()[2]
-    
     if(control == 'tank'):
         # Assume state includes θ
         dθ = flc_tank(gradient, error)
@@ -83,27 +102,35 @@ def follow_level_curve(state, desired_height, Mx, My, VX, VY, V, control='flc_ta
         dX = np.array([[dx, dy, 0]]).T * velocity
         return dX
     if(control == 'disk_pid' or control == 'pid_disk'):
-        error_sum = state[3] + error        ; print(error_sum)
+        error_sum = state[3] + error
         dx, dy = flc_disk_pid(gradient, error, error_sum)
         dx *= velocity
         dy *= velocity
         dX = np.array([[dx, dy, 0, error_sum]]).T
+        return dX
+    if(control == 'fp_disk'):
+        # The expected gradient is NOT the same as in the above function calls.
+        dx, dy = fp_disk(gradient, height)
+        dx *= velocity
+        dy *= velocity
+        dX = np.array([[dx, dy, 0, 0]]).T
+        #print(dx, dy, state[0], state[1])
         return dX        
     
     
 def runcar(duration, dt=.1):
     # initialize variables
-    x = np.array([[-4, 4, 1, 0]]).T  # x,y,v,θ
+    x = np.array([[.2, 0, .1, 0]]).T  # x,y,v,θ
     fig = plt.figure(0)
     ax = fig.add_subplot(111, aspect='equal')
     xmin, xmax, ymin, ymax = -5, 5, -5, 5
-    V_0 = 0.00005  # desired height, or potential
+    V_0 = 1  # desired height, or potential
 
     # make a controller that includes the gradient
     # the curve following controller does does not localize, but uses these:
-    Mx, My, VX, VY, V = pf.make_islands(xmin, xmax, ymin, ymax)
+    Mx, My, VX, VY, V = pf.make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=V_0, threshold=.1)
     controller = lambda state: follow_level_curve(state, V_0, Mx, My, VX, VY, V,
-                                                  control='pid_disk')
+                                                  control='fp_disk')
     tank = False
 
     # run the animation
@@ -121,7 +148,7 @@ def runcar(duration, dt=.1):
         else:
             rl.draw_disk(x[[0, 1]], 0.2, ax, 'red') # x,y
             
-        pf.draw_field(normalize=False, animation_vars=(x, xmin, xmax, ymin, ymax))
+        pf.draw_field(normalize=True, animation_vars=(V_0, xmin, xmax, ymin, ymax), fig=fig)
 
 
 def show_tank(x=np.array([[0, 0, 1, np.pi / 2]]).T, col='darkblue', r=1):
@@ -139,4 +166,4 @@ def show_tank(x=np.array([[0, 0, 1, np.pi / 2]]).T, col='darkblue', r=1):
     plt.show()
 
 if __name__ == "__main__":
-    runcar(15, dt=.3)
+    runcar(100, dt=1)
