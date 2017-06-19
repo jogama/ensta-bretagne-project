@@ -73,7 +73,7 @@ def make_islands(xmin, xmax, ymin, ymax):
     island_center1 = [xmin + (xmax - xmin) / 2, ymin + (ymax - ymin) / 2]
     island_center2 = [xmin + (xmax - xmin) * .2, ymin + (ymax - ymin) * .9]
     island_sum = mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
-#    island_sum += mnorm(island_center2, cov=2).pdf(np.dstack((X1, X2)))
+    island_sum += mnorm(island_center2, cov=2).pdf(np.dstack((X1, X2)))
     V = island_sum
 
     # VX, VY are x and y components
@@ -111,22 +111,31 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold
     
     return Mx, My, VX, VY, V
 
-def draw_field(normalize=True, three_d=False, animation_vars=None):
+def draw_field(normalize=True, three_d=False, animation_vars=None):    
+    fig = plt.figure('Island Potentials')
+    ax = fig.add_subplot(111, aspect='equal')
+    
     if animation_vars != None:
         x, xmin, xmax, ymin, ymax = animation_vars
-
-    Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax)
+    dp = .03 # is arbitrary
+    Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=dp)
     X1, X2 = np.meshgrid(Mx, My)
 
+        
     if(normalize):
         R = np.sqrt(VX**2 + VY**2)
         plt.quiver(Mx, My, VX / R, VY / R)
     else:
         plt.quiver(Mx, My, VX, VY)
 
+    # draw contour to be followed
+    cs = plt.contour(Mx, My, V, levels=[dp])
+    plt.clabel(cs, inline=1, fontsize=10)
+    
+
     if(three_d):
         from mpl_toolkits.mplot3d import axes3d
-        fig2 = plt.figure('0')
+        fig2 = plt.figure('Island 3D')
         ax1 = fig2.add_subplot(111, projection='3d')
         ax1.plot_surface(X1, X2, V)
 
@@ -142,8 +151,6 @@ def f(x, u):
 if __name__ == "__main__":
     x = np.array([[4, -3, 1, 2]]).T  # x,y,v,θ
     dt = 0.2
-    fig = plt.figure('Two normalized Island')
-    ax = fig.add_subplot(111, aspect='equal')
     # xmin,xmax,ymin,ymax=-5,5,-5,5
     av = (None, -5, 5, -5, 5)
     draw_field(three_d=True, normalize=True, animation_vars=av)
