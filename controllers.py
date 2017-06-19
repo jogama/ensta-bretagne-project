@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from potential_field_islands import draw_field, make_islands
+import potential_fields as pf
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
 import roblib as rl
@@ -28,88 +28,72 @@ def f(x, u=np.array([[0], [0.3]])):
     v, θ = x[2], x[3]
     return np.array([[v * np.cos(θ)], [v * np.sin(θ)], [u[0]], [u[1]]])
 
-def location_to_index(loc, Mx, My):
-    ''' Converts location in plot to index for the gradient and potentia matrices.
-    Args:
-      loc: iterable where loc[0] anx loc[1] are the x and y coordinates of the
-         location, respectively.
-      Mx and My:
-         1-d numpy arrays with linearly increasing values. They are the x and y
-         coordinates of the gradient and potential values, respectively.
-    Returns:
-      index: numpy array of shape (2,) with index corresponding to the gradient
-         and potential arrays.
-    '''
-    # We assume the difference between the first two values in Mx, My, is the
-    #   step size for the entire matrix, and extrapolate.
-    #   There's still probably an easier way.
-    step_size_guess = np.abs(np.array([Mx[0] - Mx[1], My[0] - My[1]]))
-    x     = np.array([loc[0], loc[1]]).flatten()
-    x_0   = np.array((Mx[0], My[0]))
-    index = np.round((x - x_0) / step_size_guess)
 
-    # I feel that these eight lines could be done in two...
-    if(index[0] >= Mx.size):
-        index[0] = Mx.size - 1
-    elif(index[0] < 0):
-        index[0] = 0        
-    if(index[1] >=  My.size):
-        index[1] = My.size - 1
-    elif(index[1] < 0):
-        index[1] = 0
-
-    return index.astype(int)
-
-def flc_disk(gradient, height, desired_height):
+def flc_disk(gradient, error):
     unit_g = gradient / norm(gradient)
-    height_diff = desired_height - height
-    dx = - unit_g[0] + unit_g[1] * height_diff * np.round(1 / height_diff)
-    dy =   unit_g[1] + unit_g[0] * height_diff * np.round(1 / height_diff)
+    dx = - unit_g[0] + unit_g[1] * error * np.round(1 / error)
+    dy =   unit_g[1] + unit_g[0] * error * np.round(1 / error)
 
     return np.array([dx, dy])
 
-def flc_tank(gradient, height, desired_height):
+def flc_disk_pid(gradient, error, error_sum):
+    r = 0#np.array([-gradient[0], gradient[1]]) / norm(gradient)
+    g = np.array([ gradient[1], gradient[0]]) / norm(gradient)
+    g = g * error * np.round(1 / error) # Proportional term
+    #    g = g + error_sum # Integral term
+
+    return (r + g).flatten()
+
+def flc_tank(gradient, error):
     # This scenario assumes we can only change the angle, or heading, of the vehicle.
     # It would be more efficient to pass dx and dy rather than recalculating them
     # in follow_level_curve, but this controller should approximate the real world.
     unit_g = gradient / norm(gradient)
-    height_diff = desired_height - height
     
-    dx = - unit_g[0] + unit_g[1] * height_diff * np.round(1 / height_diff)
-    dy =   unit_g[1] + unit_g[0] * height_diff * np.round(1 / height_diff)
+    dx = - unit_g[0] + unit_g[1] * error * np.round(1 / error)
+    dy =   unit_g[1] + unit_g[0] * error * np.round(1 / error)
     dθ = np.arctan(dy / dx)
 
     return dθ
     
 
-def follow_level_curve(state, desired_height, Mx, My, VX, VY, V):
+def follow_level_curve(state, desired_height, Mx, My, VX, VY, V, control='flc_tank'):
     '''
     Wrapper for flc_tank and flc_disk. The state should really be an object, with properties. 
     '''
     # pyplot displays the robot in the coordinate frame, and this is its state.
     # The potential and gradient matrices have integer indices, thus this conversion:
-    xi = location_to_index(state, Mx, My)
-    height = V[xi[0], xi[1]]; 
+    xi = pf.location_to_index(state, Mx, My)
+    height = V[xi[0], xi[1]]
+    error = desired_height - height
     gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
     velocity = state.flatten()[2]
-    if(state.size == 4):
+    
+    if(control == 'tank'):
         # Assume state includes θ
-        dθ = flc_tank(gradient, height, desired_height)
+        dθ = flc_tank(gradient, error)
         dx = velocity * np.cos(dθ)
         dy = velocity * np.sin(dθ)
         dX = np.array([[dx, dy, 0, dθ]]).T
         return dX
-    if(state.size == 3):
+    if(control == 'disk'):
         # Assume state does not include θ
         dX = np.zeros((3,1))
-        dx, dy = flc_disk(gradient, height, desired_height) 
+        dx, dy = flc_disk(gradient, error) 
         dX = np.array([[dx, dy, 0]]).T * velocity
         return dX
+    if(control == 'disk_pid' or control == 'pid_disk'):
+        error_sum = state[3] + error        ; print(error_sum)
+        dx, dy = flc_disk_pid(gradient, error, error_sum)
+        dx *= velocity
+        dy *= velocity
+        dX = np.array([[dx, dy, 0, error_sum]]).T
+        return dX        
     
     
 def runcar(duration, dt=.1):
     # initialize variables
-    x = np.array([[-4, 4, 1]]).T  # x,y,v,θ
+    x = np.array([[-4, 4, 1, 0]]).T  # x,y,v,θ
     fig = plt.figure(0)
     ax = fig.add_subplot(111, aspect='equal')
     xmin, xmax, ymin, ymax = -5, 5, -5, 5
@@ -117,8 +101,10 @@ def runcar(duration, dt=.1):
 
     # make a controller that includes the gradient
     # the curve following controller does does not localize, but uses these:
-    Mx, My, VX, VY, V = make_islands(xmin, xmax, ymin, ymax)
-    controller = lambda state: follow_level_curve(state, V_0, Mx, My, VX, VY, V)
+    Mx, My, VX, VY, V = pf.make_islands(xmin, xmax, ymin, ymax)
+    controller = lambda state: follow_level_curve(state, V_0, Mx, My, VX, VY, V,
+                                                  control='pid_disk')
+    tank = False
 
     # run the animation
     for t in np.arange(0, duration, dt):
@@ -130,12 +116,12 @@ def runcar(duration, dt=.1):
         
         # iterate the controller and draw vehicle
         x = x + dt * controller(x)
-        if(x.size == 4):
+        if(tank):
             rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
-        elif(x.size == 3):
+        else:
             rl.draw_disk(x[[0, 1]], 0.2, ax, 'red') # x,y
             
-        draw_field(normalize=False, animation_vars=(x, xmin, xmax, ymin, ymax))
+        pf.draw_field(normalize=False, animation_vars=(x, xmin, xmax, ymin, ymax))
 
 
 def show_tank(x=np.array([[0, 0, 1, np.pi / 2]]).T, col='darkblue', r=1):
@@ -153,4 +139,4 @@ def show_tank(x=np.array([[0, 0, 1, np.pi / 2]]).T, col='darkblue', r=1):
     plt.show()
 
 if __name__ == "__main__":
-    runcar(25, dt=.5)
+    runcar(15, dt=.3)
