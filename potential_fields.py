@@ -114,14 +114,17 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold
     
     return Mx, My, VX, VY, V
 
-def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None):
+def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None, field=None):
     if(fig is None):
         fig = plt.figure('Island Potentials')
     ax = fig.add_subplot(111, aspect='equal')
     
-    if animation_vars != None:
+    if field is None and animation_vars is not None:
         dp, xmin, xmax, ymin, ymax = animation_vars
-    Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=dp)
+        Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=dp)
+    else:
+        Mx, My, VX, VY, V, dp = field
+        
     X1, X2 = np.meshgrid(Mx, My)
 
         
