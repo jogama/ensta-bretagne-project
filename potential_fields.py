@@ -32,16 +32,16 @@ def location_to_index(loc, Mx, My):
     #   step size for the entire matrix, and extrapolate.
     #   There's still probably an easier way.
     step_size_guess = np.abs(np.array([Mx[0] - Mx[1], My[0] - My[1]]))
-    x     = np.array([loc[0], loc[1]]).flatten()
-    x_0   = np.array((Mx[0], My[0]))
+    x = np.array([loc[0], loc[1]]).flatten()
+    x_0 = np.array((Mx[0], My[0]))
     index = np.round((x - x_0) / step_size_guess)
 
     # I feel that these eight lines could be done in two...
     if(index[0] >= Mx.size):
         index[0] = Mx.size - 1
     elif(index[0] < 0):
-        index[0] = 0        
-    if(index[1] >=  My.size):
+        index[0] = 0
+    if(index[1] >= My.size):
         index[1] = My.size - 1
     elif(index[1] < 0):
         index[1] = 0
@@ -91,13 +91,12 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold
     '''makes the potential field that the vehicle would follow'''
     Mx, My, GX, GY, V = make_islands(xmin, xmax, ymin, ymax)
     VX, VY = GY, GX
-    
+
     if(desired_potential is None):
         desired_potential = np.mean(V)
 
-    desired_pot_low  = desired_potential + desired_potential * threshold
-    desired_pot_high = desired_potential - desired_potential * threshold 
-        
+    desired_pot_low = desired_potential + desired_potential * threshold
+    desired_pot_high = desired_potential - desired_potential * threshold
 
     # Make field orthogonal to gradient
     if(clockwise):
@@ -105,29 +104,32 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold
     else:
         VY = -VY
 
-    # Make field attractive about the desired potential. 
+    # Make field attractive about the desired potential.
     less_than_wanted = (V < desired_pot_low).astype(np.int)
     more_than_wanted = (V > desired_pot_high).astype(np.int)
     wanted = ((V > desired_pot_low) & (V < desired_pot_high)).astype(np.int)
-    VX = ((VX + GX) * less_than_wanted) + (VX - GX) * more_than_wanted + VX * wanted
-    VY = ((VY + GY) * less_than_wanted) + (VY - GY) * more_than_wanted + VY * wanted
-    
+    VX = ((VX + GX) * less_than_wanted) + \
+        (VX - GX) * more_than_wanted + VX * wanted
+    VY = ((VY + GY) * less_than_wanted) + \
+        (VY - GY) * more_than_wanted + VY * wanted
+
     return Mx, My, VX, VY, V
+
 
 def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None, field=None):
     if(fig is None):
         fig = plt.figure('Island Potentials')
     ax = fig.add_subplot(111, aspect='equal')
-    
+
     if field is None and animation_vars is not None:
         dp, xmin, xmax, ymin, ymax = animation_vars
-        Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=dp)
+        Mx, My, VX, VY, V = make_vehicle_field(
+            xmin, xmax, ymin, ymax, desired_potential=dp)
     else:
         Mx, My, VX, VY, V, dp = field
-        
+
     X1, X2 = np.meshgrid(Mx, My)
 
-        
     if(normalize):
         R = np.sqrt(VX**2 + VY**2)
         plt.quiver(Mx, My, VX / R, VY / R)
@@ -137,7 +139,6 @@ def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None, fie
     # draw contour to be followed
     cs = plt.contour(Mx, My, V, levels=[dp])
     plt.clabel(cs, inline=1, fontsize=10)
-    
 
     if(three_d):
         from mpl_toolkits.mplot3d import axes3d
@@ -146,12 +147,6 @@ def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None, fie
         ax1.plot_surface(X1, X2, V)
 
     return()
-
-
-def f(x, u):
-    x, u = x.flatten(), u.flatten()
-    v, θ = x[2], x[3]
-    return np.array([[v * np.cos(θ)], [v * np.sin(θ)], [u[0]], [u[1]]])
 
 
 if __name__ == "__main__":

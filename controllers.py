@@ -12,8 +12,6 @@ There is not a single convention as to the definition of the state in robmoocpy 
 """
 
 
-
-
 def fp_disk(gradient, height):
     '''Follow Potential as a Disk.
     Args:
@@ -25,11 +23,12 @@ def fp_disk(gradient, height):
       and should be rewritten as such. 
     '''
     # normalize gradient
-    gradient = gradient / norm(gradient);
+    gradient = gradient / norm(gradient)
     dx = gradient[1]
     dy = gradient[0]
     return np.array([dx, dy])
-        
+
+
 def runcar(duration, dt=.1):
     # initialize variables
     x = np.array([[.2, 0, .1, 0]]).T  # x,y,v,θ
@@ -54,13 +53,13 @@ def runcar(duration, dt=.1):
         gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
 
         # Get the displacements * velocity to iterate the controller:
-        print( x.flatten()[2], fp_disk(gradient, height))
+        print(x.flatten()[2], fp_disk(gradient, height))
         dx, dy = fp_disk(gradient, height) * x.flatten()[2]
         dX = np.array([[dx, dy, 0, 0]]).T
-        x = x + dt * dX
+        x  = x + dt * dX
 
         # Draw vehicle and field
-        rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ        
+        rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
         pf.draw_field(fig=fig, field=(Mx, My, VX, VY, V, V_0))
 
 
