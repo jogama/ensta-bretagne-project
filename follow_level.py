@@ -33,8 +33,8 @@ def location_to_index(loc, Mx, My):
     index = np.round((x - x_0) / step_size_guess)
 
     # Prevent out-of-bounds errors and return
-    index[0] = np.clip(index[0], 0, Mx.size)
-    index[1] = np.clip(index[1], 0, My.size)
+    index[0] = np.clip(index[0], 0, Mx.size - 1)
+    index[1] = np.clip(index[1], 0, My.size - 1)
     return index.astype(int)
 
 
@@ -99,9 +99,10 @@ def fp_disk(gradient, height):
     '''
     # normalize gradient
     gradient = gradient / norm(gradient)
-    dx = - gradient[1]
-    dy = gradient[0]
-    plt.arrow(-3, -3, gradient[0], gradient[1], label='gradient') # debug
+    dx = -gradient[0]
+    dy = -gradient[1]
+    plt.arrow(-4, -3, gradient[0], gradient[1], label='gradient') # debug
+    plt.arrow(-2, -3, dx, dy, label='dX') # debug
     return np.array([dx, dy])
 
 
