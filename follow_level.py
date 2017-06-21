@@ -35,6 +35,7 @@ def location_to_index(loc, Mx, My):
     # Prevent out-of-bounds errors and return
     index[0] = np.clip(index[0], 0, Mx.size - 1)
     index[1] = np.clip(index[1], 0, My.size - 1)
+
     return index.astype(int)
 
 
@@ -105,7 +106,52 @@ def fp_disk(gradient, height):
     plt.arrow(-2, -3, dx, dy, label='dX') # debug
     return np.array([dx, dy])
 
+def desired_heading(gradient, height, height_desired):
+    '''
+    Should almost certainly be combined with control().
+    Args:
+      gradient: numpy array of shape
+    '''
+    assert(gradient.shape == (2,))
+    r = np.array([-gradient[1], gradient[0]]) / norm(gradient) * np.sign()
+    θ_desired = np.tan(r[1] / r[0])
+    return θ_desired
+    
 
+def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
+    '''
+    Args:
+      x: state vector as a numpy array
+    Remarks: See "Mobile Robotics" sec 3.1.2 (L. Jaulin) for
+      derivation
+    '''
+    u = np.zeros((2,1))
+    u[0] = 0 # no acceleration
+
+    # Proportional-Derivative control of heading
+    θ = x.flatten()[3]
+    u[1] = a2 * rl.sawtooth(θ_desired - θ) - b2 * np.sin(θ - θ_previous) / dt
+                                               
+    return u
+
+
+def f(x, u):
+    '''
+    evolution funct
+    Args:
+      x, u: state and input vectors, respectively.
+        x is a numpy arrays; u is scalar
+    Returns:
+      xdot: the approximate time derivative of the state.
+        of type numpy array with shape (x.size,1).
+    '''
+    x, u = x.flatten(), u.flatten()
+    v, θ = x[2], x[3]
+
+    return np.array([[v * np.cos(θ), v * np.sin(θ), u[0], u[1]]]).T
+
+    
+# Euler's approx
 def runcar(duration, dt=.1):
     # initialize variables
     x = np.array([[.2, 0, 1, 0]]).T  # x,y,v,θ
@@ -117,6 +163,7 @@ def runcar(duration, dt=.1):
                                               desired_potential=V_0, threshold=.1)
 
     # run the animation
+    θ_previous = x.flatten()[3]
     for t in np.arange(0, duration, dt):
         # Reset matplotlib view
         plt.pause(0.001)
@@ -130,12 +177,15 @@ def runcar(duration, dt=.1):
         gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
         c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b'); ax.add_artist(c1);
         c2 = plt.Circle((x[0]     , x[1])     , .2, color='g'); ax.add_artist(c2);
-
+        pdb.set_trace()
         # Get the displacements * velocity to iterate the controller:
-        dx, dy = fp_disk(gradient, height) * x.flatten()[2]
-        dX = np.array([[dx, dy, 0, 0]]).T
-        x  = x + dt * dX
+        θ_d = desired_heading(gradient, height)
+        u   = control(x, θ_d, θ_previous, dt)
+        x   = x + dt * f(x, u)
 
+        # Retain previous θ for PD control (consider including this in x)
+        θ_previous = x.flatten()[3]
+            
         # Draw vehicle and field
         rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
         draw_field(fig=fig, field=(Mx, My, VX, VY, V, V_0))
