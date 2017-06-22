@@ -11,7 +11,7 @@ import pdb
 """
 There is not a single convention as to the definition of the state in robmoocpy code. Here, it will be a numpy array x = [x, y, θ]. This would more elegantly bre represented as a vector with respect to the origin. However, we will first implement this in a "yo, it just works this way" kind of way. Aiming for easiest correct implementation, even if it is somewhat cumbersome. 
 """
-
+np.set_printoptions(threshold=np.inf) #debug
 def location_to_index(loc, Mx, My):
     ''' Converts location in plot to index for the gradient and potentia matrices.
     Args:
@@ -53,24 +53,23 @@ def make_islands(xmin, xmax, ymin, ymax):
       VX, VY: The gradient in the X and Y direction, respectively, of V.
     '''
     # x and y coordinates/locations of the arrows
-    Mx = np.arange(xmin, xmax, 0.3)
-    My = np.arange(ymin, ymax, 0.3)
+    Mx = np.arange(xmin, xmax, 1)
+    My = np.arange(ymin, ymax, 1)
     X1, X2 = np.meshgrid(Mx, My)
     
     # Draw islands
     island_center0 = [xmin + (xmax - xmin) * .5, ymin + (ymax - ymin) * .5]
-    island_sum = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
-    V = island_sum * 100
+    V = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) * 50
     
     # VX, VY are x and y components.
     # I don't know why they must be flipped; it's worrisome
-    VX = np.gradient(np.arange(Mx.size))
-    VY = np.gradient(np.arange(My.size))
+    VX = np.gradient(V)[0]
+    VY = np.gradient(V)[1]
 
     return (Mx, My, VX, VY, V)
 
 
-def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=0.3):
+def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.7):
     '''makes the potential field that the vehicle would follow, clockwise'''
     Mx, My, GX, GY, V = make_islands(xmin, xmax, ymin, ymax)
     VX, VY = -GY, GX
@@ -137,11 +136,11 @@ def f(x, u):
 # Euler's approx
 def runcar(duration, dt=.1):
     # initialize variables
-    x = np.array([[.2, 0, 1, 0]]).T  # x,y,v,θ
+    x = np.array([[-4.2, 0, 2, np.pi / 4]]).T  # x,y,v,θ
     fig = plt.figure()
     ax = fig.add_subplot(111, aspect='equal')
-    xmin, xmax, ymin, ymax = -5, 6, -5, 5
-    V_0 = 1  # desired height, or potential
+    xmin, xmax, ymin, ymax = -5, 5, -5, 5
+    V_0 = .1  # desired height, or potential
     Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax,
                                               desired_potential=V_0, threshold=.1)
 
@@ -154,13 +153,13 @@ def runcar(duration, dt=.1):
         ax.set_xlim(xmin, xmax)
         ax.set_ylim(ymin, ymax)
 
-        # The controller takes only gradient and height as input:
+        # Controller inputs are height and r, the direction the vehicle's field points in
         xi = location_to_index(x, Mx, My)
         height = V[xi[0], xi[1]]
-        gradient = np.array([-VX,[xi[0], xi[1]], VY[xi[0], xi[1]]])
+        r = np.array([VX.T[xi[0], xi[1]], VY.T[xi[0], xi[1]]])
 
         # Get the displacements * velocity to iterate the controller:
-        θ_d = desired_heading(gradient, height, V_0)
+        θ_d = desired_heading(r, height, V_0)
         u   = control(x, θ_d, θ_previous, dt)
         x   = x + dt * f(x, u)
 
@@ -170,11 +169,13 @@ def runcar(duration, dt=.1):
         # for debugging
         c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b'); ax.add_artist(c1);
         c2 = plt.Circle((x[0]     , x[1])     , .2, color='g'); ax.add_artist(c2);
-        plt.arrow(-2, -3, gradient[0]/norm(gradient), gradient[1]/norm(gradient)) # debug    
+        plt.arrow(Mx[xi[0]], My[xi[1]], r[0]/norm(r), r[1]/norm(r),
+                  head_width=.25) # debug    
 
         # Draw vehicle and field
-        rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
+#        rl.draw_tank(x[[0, 1, 3]], 'red', 0.1)  # x,y,θ
         draw_field(fig=fig, field=(Mx, My, VX, VY, V, V_0))
+
 
 if __name__ == "__main__":
     runcar(20, dt=.1)

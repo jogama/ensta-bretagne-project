@@ -15,40 +15,6 @@ import matplotlib.pyplot as plt
 import roblib as rl
 import numpy as np
 
-
-def location_to_index(loc, Mx, My):
-    ''' Converts location in plot to index for the gradient and potentia matrices.
-    Args:
-      loc: iterable where loc[0] anx loc[1] are the x and y coordinates of the
-         location, respectively.
-      Mx and My:
-         1-d numpy arrays with linearly increasing values. They are the x and y
-         coordinates of the gradient and potential values, respectively.
-    Returns:
-      index: numpy array of shape (2,) with index corresponding to the gradient
-         and potential arrays.
-    '''
-    # We assume the difference between the first two values in Mx, My, is the
-    #   step size for the entire matrix, and extrapolate.
-    #   There's still probably an easier way.
-    step_size_guess = np.abs(np.array([Mx[0] - Mx[1], My[0] - My[1]]))
-    x = np.array([loc[0], loc[1]]).flatten()
-    x_0 = np.array((Mx[0], My[0]))
-    index = np.round((x - x_0) / step_size_guess)
-
-    # I feel that these eight lines could be done in two...
-    if(index[0] >= Mx.size):
-        index[0] = Mx.size - 1
-    elif(index[0] < 0):
-        index[0] = 0
-    if(index[1] >= My.size):
-        index[1] = My.size - 1
-    elif(index[1] < 0):
-        index[1] = 0
-
-    return index.astype(int)
-
-
 def make_islands(xmin, xmax, ymin, ymax):
     '''
     Simply makes two 'islands' from gaussian distributions, joins them,
