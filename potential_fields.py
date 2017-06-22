@@ -81,8 +81,8 @@ def make_islands(xmin, xmax, ymin, ymax):
     V = island_sum * 100
 
     # VX, VY are x and y components
-    VX = np.gradient(island_sum)[1]
-    VY = np.gradient(island_sum)[0]
+    VX = np.gradient(V)[1]
+    VY = np.gradient(V)[0]
 
     return (Mx, My, VX, VY, V)
 

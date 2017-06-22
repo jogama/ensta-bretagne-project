@@ -29,13 +29,12 @@ def location_to_index(loc, Mx, My):
     #   There's still probably an easier way.
     step_size_guess = np.abs(np.array([Mx[0] - Mx[1], My[0] - My[1]]))
     x = np.array([loc[0], loc[1]]).flatten()
-    x_0 = np.array((Mx[0], My[0]))
+    x_0 = np.array([Mx[0], My[0]])
     index = np.round((x - x_0) / step_size_guess)
 
     # Prevent out-of-bounds errors and return
     index[0] = np.clip(index[0], 0, Mx.size - 1)
     index[1] = np.clip(index[1], 0, My.size - 1)
-
     return index.astype(int)
 
 
@@ -62,11 +61,11 @@ def make_islands(xmin, xmax, ymin, ymax):
     island_center0 = [xmin + (xmax - xmin) * .5, ymin + (ymax - ymin) * .5]
     island_sum = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
     V = island_sum * 100
-
+    
     # VX, VY are x and y components.
     # I don't know why they must be flipped; it's worrisome
-    VX = np.gradient(island_sum)[1]
-    VY = np.gradient(island_sum)[0]
+    VX = np.gradient(np.arange(Mx.size))
+    VY = np.gradient(np.arange(My.size))
 
     return (Mx, My, VX, VY, V)
 
@@ -93,12 +92,13 @@ def desired_heading(gradient, height, height_desired):
     Should almost certainly be combined with control().
     Args:
       gradient: numpy array of shape
+      height  : vehicle's distance from seafloor below. Can be thought of as potential.
+      height_desired: The target level, or height, to maintain.
     '''
     assert(gradient.shape == (2,))
     climb = np.sign(height_desired - height)
-    r = np.array([-gradient[1], gradient[0]]) / norm(gradient) * climb
-    θ_desired = np.arctan(r[1] / r[0])
-    plt.arrow(-4, -3, r[0], r[1], label='r') # debug
+    r = gradient# np.array([-gradient[1], gradient[0]]) / norm(gradient) * climb
+    θ_desired = np.arctan(r[1] / r[0])        
     return θ_desired
     
 
@@ -140,7 +140,7 @@ def runcar(duration, dt=.1):
     x = np.array([[.2, 0, 1, 0]]).T  # x,y,v,θ
     fig = plt.figure()
     ax = fig.add_subplot(111, aspect='equal')
-    xmin, xmax, ymin, ymax = -5, 5, -5, 5
+    xmin, xmax, ymin, ymax = -5, 6, -5, 5
     V_0 = 1  # desired height, or potential
     Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax,
                                               desired_potential=V_0, threshold=.1)
@@ -157,9 +157,7 @@ def runcar(duration, dt=.1):
         # The controller takes only gradient and height as input:
         xi = location_to_index(x, Mx, My)
         height = V[xi[0], xi[1]]
-        gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
-        c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b'); ax.add_artist(c1);
-        c2 = plt.Circle((x[0]     , x[1])     , .2, color='g'); ax.add_artist(c2);
+        gradient = np.array([-VX,[xi[0], xi[1]], VY[xi[0], xi[1]]])
 
         # Get the displacements * velocity to iterate the controller:
         θ_d = desired_heading(gradient, height, V_0)
@@ -168,7 +166,12 @@ def runcar(duration, dt=.1):
 
         # Retain previous θ for PD control (consider including this in x)
         θ_previous = x.flatten()[3]
-            
+
+        # for debugging
+        c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b'); ax.add_artist(c1);
+        c2 = plt.Circle((x[0]     , x[1])     , .2, color='g'); ax.add_artist(c2);
+        plt.arrow(-2, -3, gradient[0]/norm(gradient), gradient[1]/norm(gradient)) # debug    
+
         # Draw vehicle and field
         rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
         draw_field(fig=fig, field=(Mx, My, VX, VY, V, V_0))
