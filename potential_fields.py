@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import roblib as rl
 import numpy as np
 
+
 def make_islands(xmin, xmax, ymin, ymax):
     '''
     Simply makes two 'islands' from gaussian distributions, joins them,

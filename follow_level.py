@@ -11,7 +11,9 @@ import pdb
 """
 There is not a single convention as to the definition of the state in robmoocpy code. Here, it will be a numpy array x = [x, y, θ]. This would more elegantly bre represented as a vector with respect to the origin. However, we will first implement this in a "yo, it just works this way" kind of way. Aiming for easiest correct implementation, even if it is somewhat cumbersome. 
 """
-np.set_printoptions(threshold=np.inf) #debug
+np.set_printoptions(threshold=np.inf)  # debug
+
+
 def location_to_index(loc, Mx, My):
     ''' Converts location in plot to index for the gradient and potentia matrices.
     Args:
@@ -53,18 +55,18 @@ def make_islands(xmin, xmax, ymin, ymax):
       VX, VY: The gradient in the X and Y direction, respectively, of V.
     '''
     # x and y coordinates/locations of the arrows
-    Mx = np.arange(xmin, xmax, 1)
-    My = np.arange(ymin, ymax, 1)
+    Mx = np.arange(xmin, xmax, .3)
+    My = np.arange(ymin, ymax, .3)
     X1, X2 = np.meshgrid(Mx, My)
-    
+
     # Draw islands
     island_center0 = [xmin + (xmax - xmin) * .5, ymin + (ymax - ymin) * .5]
     V = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) * 50
-    
+
     # VX, VY are x and y components.
     # I don't know why they must be flipped; it's worrisome
-    VX = np.gradient(V)[0]
-    VY = np.gradient(V)[1]
+    VX = np.gradient(V)[1]  # (np.arange(Mx.size))#
+    VY = np.gradient(V)[0]  # (np.arange(Mx.size))#
 
     return (Mx, My, VX, VY, V)
 
@@ -75,9 +77,9 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.7):
     VX, VY = -GY, GX
 
     # Make field attractive about the desired potential and within the threshold
-    desired_pot_low  = desired_potential + desired_potential * threshold
+    desired_pot_low = desired_potential + desired_potential * threshold
     desired_pot_high = desired_potential - desired_potential * threshold
-    less_than_wanted = (V < desired_pot_low ).astype(np.int)
+    less_than_wanted = (V < desired_pot_low).astype(np.int)
     more_than_wanted = (V > desired_pot_high).astype(np.int)
     wanted = ((V > desired_pot_low) & (V < desired_pot_high)).astype(np.int)
     VX = (VX + GX) * less_than_wanted + (VX - GX) * more_than_wanted + VX * wanted
@@ -86,20 +88,18 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.7):
     return Mx, My, VX, VY, V
 
 
-def desired_heading(gradient, height, height_desired):
+def desired_heading(heading_vector, height, height_desired):
     '''
     Should almost certainly be combined with control().
     Args:
-      gradient: numpy array of shape
-      height  : vehicle's distance from seafloor below. Can be thought of as potential.
+      heading_vector: numpy array of shape (2,)
+      height: vehicle's distance from seafloor below. Can be thought of as potential.
       height_desired: The target level, or height, to maintain.
     '''
-    assert(gradient.shape == (2,))
-    climb = np.sign(height_desired - height)
-    r = gradient# np.array([-gradient[1], gradient[0]]) / norm(gradient) * climb
-    θ_desired = np.arctan(r[1] / r[0])        
+    assert(heading_vector.shape == (2,))
+    θ_desired = np.arctan2(heading_vector[1], heading_vector[0])
     return θ_desired
-    
+
 
 def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
     '''
@@ -108,12 +108,12 @@ def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
     Remarks: See "Mobile Robotics" sec 3.1.2 (L. Jaulin) for
       derivation
     '''
-    u = np.zeros((2,1))
-    u[0] = 0 # no acceleration
+    u = np.zeros((2, 1))
+    u[0] = 0  # no acceleration
 
     # Proportional-Derivative control of heading
     θ = x.flatten()[3]
-    u[1] = a2 * rl.sawtooth(θ_desired - θ) - b2 * np.sin(θ - θ_previous) / dt
+    u[1] = a2 * rl.sawtooth(θ_desired - θ)  # - b2 * np.sin(θ - θ_previous) / dt
     return u
 
 
@@ -132,17 +132,17 @@ def f(x, u):
 
     return np.array([[v * np.cos(θ), v * np.sin(θ), u[0], u[1]]]).T
 
-    
+
 # Euler's approx
 def runcar(duration, dt=.1):
     # initialize variables
-    x = np.array([[-4.2, 0, 2, np.pi / 4]]).T  # x,y,v,θ
+    x = np.array([[-4.6, 0, 2, np.pi / 4]]).T  # x,y,v,θ
     fig = plt.figure()
     ax = fig.add_subplot(111, aspect='equal')
     xmin, xmax, ymin, ymax = -5, 5, -5, 5
-    V_0 = .1  # desired height, or potential
+    V_0 = 1  # desired height, or potential
     Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax,
-                                              desired_potential=V_0, threshold=.1)
+                                           desired_potential=V_0, threshold=.1)
 
     # run the animation
     θ_previous = x.flatten()[3]
@@ -160,22 +160,27 @@ def runcar(duration, dt=.1):
 
         # Get the displacements * velocity to iterate the controller:
         θ_d = desired_heading(r, height, V_0)
-        u   = control(x, θ_d, θ_previous, dt)
-        x   = x + dt * f(x, u)
+        u = control(x, θ_d, θ_previous, dt)
+        x = x + dt * f(x, u)
 
         # Retain previous θ for PD control (consider including this in x)
         θ_previous = x.flatten()[3]
 
         # for debugging
-        c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b'); ax.add_artist(c1);
-        c2 = plt.Circle((x[0]     , x[1])     , .2, color='g'); ax.add_artist(c2);
-        plt.arrow(Mx[xi[0]], My[xi[1]], r[0]/norm(r), r[1]/norm(r),
-                  head_width=.25) # debug    
+        c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b')
+        ax.add_artist(c1)
+        c2 = plt.Circle((x[0], x[1]), .2, color='g')
+        ax.add_artist(c2)
+        plt.arrow(Mx[xi[0]], My[xi[1]], r[0] / norm(r), r[1] / norm(r),
+                  head_width=.25)  # debug
+        plt.arrow(-4, -4, np.cos(θ_d), np.sin(θ_d), head_width=.25)
+        plt.text(-4, -4.5, str(θ_d / np.pi) + 'π')
+        plt.text(-0, -4.5, 'r = ' + str(r))
 
         # Draw vehicle and field
-#        rl.draw_tank(x[[0, 1, 3]], 'red', 0.1)  # x,y,θ
+        rl.draw_tank(x[[0, 1, 3]], 'red', 0.1)  # x,y,θ
         draw_field(fig=fig, field=(Mx, My, VX, VY, V, V_0))
 
 
 if __name__ == "__main__":
-    runcar(20, dt=.1)
+    runcar(7, dt=.1)
