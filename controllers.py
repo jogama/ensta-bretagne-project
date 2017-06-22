@@ -56,7 +56,7 @@ def runcar(duration, dt=.1):
         print(x.flatten()[2], fp_disk(gradient, height))
         dx, dy = fp_disk(gradient, height) * x.flatten()[2]
         dX = np.array([[dx, dy, 0, 0]]).T
-        x  = x + dt * dX
+        x = x + dt * dX
 
         # Draw vehicle and field
         rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
