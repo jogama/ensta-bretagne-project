@@ -88,24 +88,6 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=0.3)
     return Mx, My, VX, VY, V
 
 
-def fp_disk(gradient, height):
-    '''Follow Potential as a Disk.
-    Args:
-      gradient = [VX, VY] # potential
-      height = the current height
-    Returns:
-      (dx, dy)
-    Notes: The overall data model does not at all represent the auv,
-      and should be rewritten as such. 
-    '''
-    # normalize gradient
-    gradient = gradient / norm(gradient)
-    dx = -gradient[0]
-    dy = -gradient[1]
-    plt.arrow(-4, -3, gradient[0], gradient[1], label='gradient') # debug
-    plt.arrow(-2, -3, dx, dy, label='dX') # debug
-    return np.array([dx, dy])
-
 def desired_heading(gradient, height, height_desired):
     '''
     Should almost certainly be combined with control().
@@ -113,8 +95,10 @@ def desired_heading(gradient, height, height_desired):
       gradient: numpy array of shape
     '''
     assert(gradient.shape == (2,))
-    r = np.array([-gradient[1], gradient[0]]) / norm(gradient) * np.sign()
-    θ_desired = np.tan(r[1] / r[0])
+    climb = np.sign(height_desired - height)
+    r = np.array([-gradient[1], gradient[0]]) / norm(gradient) * climb
+    θ_desired = np.arctan(r[1] / r[0])
+    plt.arrow(-4, -3, r[0], r[1], label='r') # debug
     return θ_desired
     
 
@@ -131,13 +115,12 @@ def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
     # Proportional-Derivative control of heading
     θ = x.flatten()[3]
     u[1] = a2 * rl.sawtooth(θ_desired - θ) - b2 * np.sin(θ - θ_previous) / dt
-                                               
     return u
 
 
 def f(x, u):
     '''
-    evolution funct
+    evolution function
     Args:
       x, u: state and input vectors, respectively.
         x is a numpy arrays; u is scalar
@@ -177,9 +160,9 @@ def runcar(duration, dt=.1):
         gradient = np.array([VX[xi[0], xi[1]], VY[xi[0], xi[1]]])
         c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b'); ax.add_artist(c1);
         c2 = plt.Circle((x[0]     , x[1])     , .2, color='g'); ax.add_artist(c2);
-        pdb.set_trace()
+
         # Get the displacements * velocity to iterate the controller:
-        θ_d = desired_heading(gradient, height)
+        θ_d = desired_heading(gradient, height, V_0)
         u   = control(x, θ_d, θ_previous, dt)
         x   = x + dt * f(x, u)
 
