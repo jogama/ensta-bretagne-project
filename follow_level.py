@@ -11,6 +11,7 @@ import numpy as np
 Demonstration of a robot following a level curve. 
 """
 
+
 def location_to_index(loc, Mx, My):
     ''' Converts location in plot to index for the gradient and potentia matrices.
     Args:
@@ -70,7 +71,7 @@ def make_islands(xmin, xmax, ymin, ymax):
     island_center1 = [xmin + (xmax - xmin) * .4, ymin + (ymax - ymin) * .7]
     island_center2 = [xmin + (xmax - xmin) * .3, ymin + (ymax - ymin) * .4]
     island_center3 = [xmin + (xmax - xmin) * .7, ymin + (ymax - ymin) * .5]
-    V  = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
+    V = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
     V += mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
     V += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
     V += mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
@@ -97,6 +98,7 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.1):
     VY = (VY + GY) * less_than_wanted + (VY - GY) * more_than_wanted + VY * wanted
 
     return Mx, My, VX, VY, V
+
 
 def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
     '''
