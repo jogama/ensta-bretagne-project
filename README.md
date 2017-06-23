@@ -1,9 +1,12 @@
-# Here this repository explores a novel method for a UUV to follow a level curve. 
+# Autonomous vehicle following a level curve. 
 
 Uses a few files from [robmooc](https://www.ensta-bretagne.fr/jaulin/robmooc.html), specifically from [this zip](https://www.ensta-bretagne.fr/jaulin/robmoocpy.zip).
 
 
-To run the curve following:
+To visualize the the topology the robot will navigate:
+    ```$ python3 potential_fields.py```
+	
+To see a tank following a level curve:
     ```$ python3 follow_level.py```
-
-And you will see a potential field plot with a robot following a contour. 
+	
+See the code itself for further explanation, or open an issue if anything lacks documentation.

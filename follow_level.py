@@ -38,16 +38,6 @@ def location_to_index(loc, Mx, My):
     return index.astype(int)
 
 
-def show_3d_surface(Mx, My, V):
-    '''debugging utiilty to view the "ocean floor" in 3D'''
-    from mpl_toolkits.mplot3d import axes3d
-    X1, X2 = np.meshgrid(Mx, My)
-    fig2 = plt.figure('Island 3D')
-    ax1 = fig2.add_subplot(111, projection='3d')
-    ax1.plot_surface(X1, X2, V)
-    return()
-
-
 
 
 def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.1):
@@ -67,7 +57,7 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.1):
     return Mx, My, VX, VY, V
 
 
-def control(x, θ_desired, θ_previous, dt, a2=1, b2=1, v_0 = 1):
+def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
     '''
     Args:
       x: state vector as a numpy array
@@ -76,14 +66,13 @@ def control(x, θ_desired, θ_previous, dt, a2=1, b2=1, v_0 = 1):
       a2, b2: coefficients for proportional-derivative control, respectively,
         of the vehicle angle.
     '''
-    x, u = x.flatten(), np.zeros((2, 1))
-    v, θ = x[2], x[3]
+    u = np.zeros((2, 1))
+    u[0] = 0 # no acceleration
 
     # Proportional-Derivative control of heading
-    u[1] = a2 * rl.sawtooth(θ_desired - θ) - b2 * np.sin(θ - θ_previous) / dt
-
-    # Attempts to maintain speed v_0, but slows down if sharp turn
-    u[0] = np.tanh((v_0 - v) - abs(u[1]))
+    θ = x.flatten()[3]
+    u[1] = a2 * rl.sawtooth(θ_desired - θ) + b2 * np.sin(θ - θ_previous) / dt
+    print()
     return u
 
 
@@ -129,14 +118,14 @@ def runcar(duration, dt=.1):
 
         # Get the displacements * velocity to iterate the controller:
         θ_d = np.arctan2(r[1], r[0])
-        u = control(x, θ_d, θ_previous, dt, a2=10, b2=10)
+        u = control(x, θ_d, θ_previous, dt, a2=10, b2=100)
         x = x + dt * f(x, u)
 
         # Retain previous θ for PD control (consider including this in x)
         θ_previous = x.flatten()[3]
 
         # Draw vehicle and field
-        rl.draw_tank(x[[0, 1, 3]], 'red', 0.1)  # x,y,θ
+        rl.draw_tank(x[[0, 1, 3]], 'red', 0.2)  # x,y,θ
         draw_field(fig=fig, field=(Mx, My, VX, VY, V, V_0))
 
 

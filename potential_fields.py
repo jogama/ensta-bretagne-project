@@ -50,34 +50,14 @@ def make_islands(xmin, xmax, ymin, ymax):
     VY = np.gradient(V, axis=0)
     return (Mx, My, VX, VY, V)
 
-
-def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential=None, threshold=0.3, clockwise=True):
-    '''makes the potential field that the vehicle would follow'''
-    Mx, My, GX, GY, V = make_islands(xmin, xmax, ymin, ymax)
-    VX, VY = GY, GX
-
-    if(desired_potential is None):
-        desired_potential = np.mean(V)
-
-    desired_pot_low = desired_potential + desired_potential * threshold
-    desired_pot_high = desired_potential - desired_potential * threshold
-
-    # Make field orthogonal to gradient
-    if(clockwise):
-        VX = -VX
-    else:
-        VY = -VY
-
-    # Make field attractive about the desired potential.
-    less_than_wanted = (V < desired_pot_low).astype(np.int)
-    more_than_wanted = (V > desired_pot_high).astype(np.int)
-    wanted = ((V > desired_pot_low) & (V < desired_pot_high)).astype(np.int)
-    VX = ((VX + GX) * less_than_wanted) + \
-        (VX - GX) * more_than_wanted + VX * wanted
-    VY = ((VY + GY) * less_than_wanted) + \
-        (VY - GY) * more_than_wanted + VY * wanted
-
-    return Mx, My, VX, VY, V
+def show_3d_surface(Mx, My, V):
+    '''debugging utiilty to view the "ocean floor" in 3D'''
+    from mpl_toolkits.mplot3d import axes3d
+    X1, X2 = np.meshgrid(Mx, My)
+    fig2 = plt.figure('Island 3D')
+    ax1 = fig2.add_subplot(111, projection='3d')
+    ax1.plot_surface(X1, X2, V)
+    return()
 
 
 def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None, field=None):
@@ -86,6 +66,7 @@ def draw_field(normalize=True, three_d=False, animation_vars=None, fig=None, fie
     ax = fig.add_subplot(111, aspect='equal')
 
     if field is None and animation_vars is not None:
+        from follow_level import make_vehicle_field
         dp, xmin, xmax, ymin, ymax = animation_vars
         Mx, My, VX, VY, V = make_vehicle_field(
             xmin, xmax, ymin, ymax, desired_potential=dp)
@@ -117,6 +98,6 @@ if __name__ == "__main__":
     x = np.array([[4, -3, 1, 2]]).T  # x,y,v,θ
     dt = 0.2
     # xmin,xmax,ymin,ymax=-5,5,-5,5
-    av = (1, -5, 5, -5, 5)
+    av = (.03, -5, 5, -5, 5)
     draw_field(three_d=True, normalize=True, animation_vars=av)
     plt.show()
