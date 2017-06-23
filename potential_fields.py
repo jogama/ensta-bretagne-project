@@ -18,9 +18,8 @@ import numpy as np
 
 def make_islands(xmin, xmax, ymin, ymax):
     '''
-    Simply makes two 'islands' from gaussian distributions, joins them,
-    and returns data on the islands. Split off from draw_field, as the
-    data is needed by other functions. Could be better named.
+    Simply makes 'islands' from gaussian distributions, sums them,
+    and returns data on the islands.
 
     Args:
       the bounds of the region
@@ -31,26 +30,24 @@ def make_islands(xmin, xmax, ymin, ymax):
       VX, VY: The gradient in the X and Y direction, respectively, of V.
     '''
     # x and y coordinates/locations of the arrows
-    Mx = np.arange(xmin, xmax, 0.3)
-    My = np.arange(ymin, ymax, 0.3)
-
-    # Draw islands
+    Mx = np.arange(xmin, xmax, .1)
+    My = np.arange(ymin, ymax, .1)
     X1, X2 = np.meshgrid(Mx, My)
 
+    # Draw islands
     island_center0 = [xmin + (xmax - xmin) * .5, ymin + (ymax - ymin) * .5]
     island_center1 = [xmin + (xmax - xmin) * .4, ymin + (ymax - ymin) * .7]
     island_center2 = [xmin + (xmax - xmin) * .3, ymin + (ymax - ymin) * .4]
     island_center3 = [xmin + (xmax - xmin) * .7, ymin + (ymax - ymin) * .5]
-    island_sum = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
-    island_sum = mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
-    island_sum += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
-    island_sum = mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
-    V = island_sum * 100
+    V = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
+    V += mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
+    V += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
+    V += mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
 
-    # VX, VY are x and y components
-    VX = np.gradient(V)[1]
-    VY = np.gradient(V)[0]
-
+    # VX, VY are x and y components.
+    # I don't know why they must be flipped; it's worrisome
+    VX = np.gradient(V, axis=1)
+    VY = np.gradient(V, axis=0)
     return (Mx, My, VX, VY, V)
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from scipy.stats import multivariate_normal as mnorm
-from potential_fields import draw_field
+from potential_fields import draw_field, make_islands
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
 import roblib as rl
@@ -48,39 +48,6 @@ def show_3d_surface(Mx, My, V):
     return()
 
 
-def make_islands(xmin, xmax, ymin, ymax):
-    '''
-    Simply makes 'islands' from gaussian distributions, sums them,
-    and returns data on the islands.
-
-    Args:
-      the bounds of the region
-    Returns:
-      a 5-tuple (X, Y, VX, VY, V)
-      X, Y:   arrow locations for plt.quiver
-      V: "potential" at every point; the height of the sea floor
-      VX, VY: The gradient in the X and Y direction, respectively, of V.
-    '''
-    # x and y coordinates/locations of the arrows
-    Mx = np.arange(xmin, xmax, .3)
-    My = np.arange(ymin, ymax, .3)
-    X1, X2 = np.meshgrid(Mx, My)
-
-    # Draw islands
-    island_center0 = [xmin + (xmax - xmin) * .5, ymin + (ymax - ymin) * .5]
-    island_center1 = [xmin + (xmax - xmin) * .4, ymin + (ymax - ymin) * .7]
-    island_center2 = [xmin + (xmax - xmin) * .3, ymin + (ymax - ymin) * .4]
-    island_center3 = [xmin + (xmax - xmin) * .7, ymin + (ymax - ymin) * .5]
-    V = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
-    V += mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
-    V += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
-    V += mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
-
-    # VX, VY are x and y components.
-    # I don't know why they must be flipped; it's worrisome
-    VX = np.gradient(V, axis=1)
-    VY = np.gradient(V, axis=0)
-    return (Mx, My, VX, VY, V)
 
 
 def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.1):
@@ -100,7 +67,7 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.1):
     return Mx, My, VX, VY, V
 
 
-def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
+def control(x, θ_desired, θ_previous, dt, a2=1, b2=1, v_0 = 1):
     '''
     Args:
       x: state vector as a numpy array
@@ -108,15 +75,15 @@ def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
       θ_previous: vehicle angle from previous iteration
       a2, b2: coefficients for proportional-derivative control, respectively,
         of the vehicle angle.
-    Remarks: See "Mobile Robotics" sec 3.1.2 (L. Jaulin) for
-      derivation
     '''
-    u = np.zeros((2, 1))
-    u[0] = 0  # no acceleration
+    x, u = x.flatten(), np.zeros((2, 1))
+    v, θ = x[2], x[3]
 
     # Proportional-Derivative control of heading
-    θ = x.flatten()[3]
     u[1] = a2 * rl.sawtooth(θ_desired - θ) - b2 * np.sin(θ - θ_previous) / dt
+
+    # Attempts to maintain speed v_0, but slows down if sharp turn
+    u[0] = np.tanh((v_0 - v) - abs(u[1]))
     return u
 
 
