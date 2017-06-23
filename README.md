@@ -2,9 +2,8 @@
 
 Uses a few files from [robmooc](https://www.ensta-bretagne.fr/jaulin/robmooc.html), specifically from [this zip](https://www.ensta-bretagne.fr/jaulin/robmoocpy.zip).
 
-Currently, it simply demonstrates matplotlib's potential field and 3d plotting tools
 
-To run:
-    ```$ python3 potential\_field\_islands.py```
+To run the curve following:
+    ```$ python3 follow_level.py```
 
-And you will see a potential field plot and a 3d plot.
+And you will see a potential field plot with a robot following a contour. 
