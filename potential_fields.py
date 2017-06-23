@@ -42,9 +42,9 @@ def make_islands(xmin, xmax, ymin, ymax):
     island_center2 = [xmin + (xmax - xmin) * .3, ymin + (ymax - ymin) * .4]
     island_center3 = [xmin + (xmax - xmin) * .7, ymin + (ymax - ymin) * .5]
     island_sum = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
-#    island_sum = mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
-#    island_sum += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
-#    island_sum = mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
+    island_sum = mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
+    island_sum += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
+    island_sum = mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
     V = island_sum * 100
 
     # VX, VY are x and y components

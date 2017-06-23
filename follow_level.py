@@ -40,6 +40,15 @@ def location_to_index(loc, Mx, My):
     return index.astype(int)
 
 
+def show_3d_surface(Mx, My, V):
+    from mpl_toolkits.mplot3d import axes3d
+    X1, X2 = np.meshgrid(Mx, My)
+    fig2 = plt.figure('Island 3D')
+    ax1 = fig2.add_subplot(111, projection='3d')
+    ax1.plot_surface(X1, X2, V)
+    return()
+
+
 def make_islands(xmin, xmax, ymin, ymax):
     '''
     Simply makes two 'islands' from gaussian distributions, joins them,
@@ -61,7 +70,13 @@ def make_islands(xmin, xmax, ymin, ymax):
 
     # Draw islands
     island_center0 = [xmin + (xmax - xmin) * .5, ymin + (ymax - ymin) * .5]
-    V = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) * 50
+    island_center1 = [xmin + (xmax - xmin) * .4, ymin + (ymax - ymin) * .7]
+    island_center2 = [xmin + (xmax - xmin) * .3, ymin + (ymax - ymin) * .4]
+    island_center3 = [xmin + (xmax - xmin) * .7, ymin + (ymax - ymin) * .5]
+    V  = mnorm(island_center0, cov=2).pdf(np.dstack((X1, X2))) / 2
+    V += mnorm(island_center2, cov=1).pdf(np.dstack((X1, X2))) / 3
+    V += mnorm(island_center1, cov=2).pdf(np.dstack((X1, X2))) / 2
+    V += mnorm(island_center3, cov=0.5).pdf(np.dstack((X1, X2))) / 10
 
     # VX, VY are x and y components.
     # I don't know why they must be flipped; it's worrisome
@@ -86,20 +101,6 @@ def make_vehicle_field(xmin, xmax, ymin, ymax, desired_potential, threshold=.7):
     VY = (VY + GY) * less_than_wanted + (VY - GY) * more_than_wanted + VY * wanted
 
     return Mx, My, VX, VY, V
-
-
-def desired_heading(heading_vector, height, height_desired):
-    '''
-    Should almost certainly be combined with control().
-    Args:
-      heading_vector: numpy array of shape (2,)
-      height: vehicle's distance from seafloor below. Can be thought of as potential.
-      height_desired: The target level, or height, to maintain.
-    '''
-    assert(heading_vector.shape == (2,))
-    θ_desired = np.arctan2(heading_vector[1], heading_vector[0])
-    return θ_desired
-
 
 def control(x, θ_desired, θ_previous, dt, a2=1, b2=1):
     '''
@@ -140,7 +141,7 @@ def runcar(duration, dt=.1):
     fig = plt.figure()
     ax = fig.add_subplot(111, aspect='equal')
     xmin, xmax, ymin, ymax = -5, 5, -5, 5
-    V_0 = 1  # desired height, or potential
+    V_0 = .03  # desired height, or potential
     Mx, My, VX, VY, V = make_vehicle_field(xmin, xmax, ymin, ymax,
                                            desired_potential=V_0, threshold=.1)
 
@@ -159,7 +160,7 @@ def runcar(duration, dt=.1):
         r = np.array([VX.T[xi[0], xi[1]], VY.T[xi[0], xi[1]]])
 
         # Get the displacements * velocity to iterate the controller:
-        θ_d = desired_heading(r, height, V_0)
+        θ_d = np.arctan2(r[1], r[0])
         u = control(x, θ_d, θ_previous, dt)
         x = x + dt * f(x, u)
 
@@ -169,13 +170,8 @@ def runcar(duration, dt=.1):
         # for debugging
         c1 = plt.Circle((Mx[xi[0]], My[xi[1]]), .2, color='b')
         ax.add_artist(c1)
-        c2 = plt.Circle((x[0], x[1]), .2, color='g')
-        ax.add_artist(c2)
         plt.arrow(Mx[xi[0]], My[xi[1]], r[0] / norm(r), r[1] / norm(r),
                   head_width=.25)  # debug
-        plt.arrow(-4, -4, np.cos(θ_d), np.sin(θ_d), head_width=.25)
-        plt.text(-4, -4.5, str(θ_d / np.pi) + 'π')
-        plt.text(-0, -4.5, 'r = ' + str(r))
 
         # Draw vehicle and field
         rl.draw_tank(x[[0, 1, 3]], 'red', 0.1)  # x,y,θ
